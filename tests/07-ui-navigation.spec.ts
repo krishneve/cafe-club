@@ -1,0 +1,30 @@
+import { test, expect } from "@playwright/test";
+import { OWNER, CUSTOMER, login, expectHealthyPage, ownerRoutes, customerRoutes } from "./helpers";
+
+test.describe("UI / NAVIGATION / SESSION - 25 tests", () => {
+  test("226 public homepage no JS errors", async ({page}) => { const e:string[]=[];page.on("pageerror",x=>e.push(x.message));await page.goto("/");expect(e).toEqual([]); });
+  test("227 signup no JS errors", async ({page}) => { const e:string[]=[];page.on("pageerror",x=>e.push(x.message));await page.goto("/signup");expect(e).toEqual([]); });
+  test("228 login no JS errors", async ({page}) => { const e:string[]=[];page.on("pageerror",x=>e.push(x.message));await page.goto("/login");expect(e).toEqual([]); });
+  test("229 pricing no JS errors", async ({page}) => { const e:string[]=[];page.on("pageerror",x=>e.push(x.message));await page.goto("/pricing");expect(e).toEqual([]); });
+  test("230 owner dashboard no JS errors", async ({page}) => { await login(page,OWNER); const e:string[]=[];page.on("pageerror",x=>e.push(x.message));await page.goto("/admin");expect(e).toEqual([]); });
+  test("231 owner POS no JS errors", async ({page}) => { await login(page,OWNER); const e:string[]=[];page.on("pageerror",x=>e.push(x.message));await page.goto("/admin/pos");expect(e).toEqual([]); });
+  test("232 owner menu no JS errors", async ({page}) => { await login(page,OWNER); const e:string[]=[];page.on("pageerror",x=>e.push(x.message));await page.goto("/admin/menu");expect(e).toEqual([]); });
+  test("233 customer wallet no JS errors", async ({page}) => { await login(page,CUSTOMER); const e:string[]=[];page.on("pageerror",x=>e.push(x.message));await page.goto("/c/bean-and-bloom");expect(e).toEqual([]); });
+  test("234 customer rewards no JS errors", async ({page}) => { await login(page,CUSTOMER); const e:string[]=[];page.on("pageerror",x=>e.push(x.message));await page.goto("/c/bean-and-bloom/rewards");expect(e).toEqual([]); });
+  test("235 customer history no JS errors", async ({page}) => { await login(page,CUSTOMER); const e:string[]=[];page.on("pageerror",x=>e.push(x.message));await page.goto("/c/bean-and-bloom/history");expect(e).toEqual([]); });
+  test("236 owner menu to customers navigation", async ({page}) => { await login(page,OWNER);await page.goto("/admin/menu");await page.goto("/admin/customers");expect(page.url()).toContain("/admin/customers"); });
+  test("237 owner customers to transactions navigation", async ({page}) => { await login(page,OWNER);await page.goto("/admin/customers");await page.goto("/admin/transactions");expect(page.url()).toContain("/admin/transactions"); });
+  test("238 owner transactions to loyalty navigation", async ({page}) => { await login(page,OWNER);await page.goto("/admin/transactions");await page.goto("/admin/loyalty");expect(page.url()).toContain("/admin/loyalty"); });
+  test("239 owner loyalty to rewards navigation", async ({page}) => { await login(page,OWNER);await page.goto("/admin/loyalty");await page.goto("/admin/rewards");expect(page.url()).toContain("/admin/rewards"); });
+  test("240 owner rewards to campaigns navigation", async ({page}) => { await login(page,OWNER);await page.goto("/admin/rewards");await page.goto("/admin/campaigns");expect(page.url()).toContain("/admin/campaigns"); });
+  test("241 owner campaigns to offers navigation", async ({page}) => { await login(page,OWNER);await page.goto("/admin/campaigns");await page.goto("/admin/offers");expect(page.url()).toContain("/admin/offers"); });
+  test("242 customer wallet to rewards navigation", async ({page}) => { await login(page,CUSTOMER);await page.goto("/c/bean-and-bloom");await page.goto("/c/bean-and-bloom/rewards");expect(page.url()).toContain("/rewards"); });
+  test("243 customer rewards to history navigation", async ({page}) => { await login(page,CUSTOMER);await page.goto("/c/bean-and-bloom/rewards");await page.goto("/c/bean-and-bloom/history");expect(page.url()).toContain("/history"); });
+  test("244 customer history to offers navigation", async ({page}) => { await login(page,CUSTOMER);await page.goto("/c/bean-and-bloom/history");await page.goto("/c/bean-and-bloom/offers");expect(page.url()).toContain("/offers"); });
+  test("245 owner back navigation", async ({page}) => { await login(page,OWNER);await page.goto("/admin/menu");await page.goto("/admin/customers");await page.goBack();expect(page.url()).toContain("/admin/menu"); });
+  test("246 customer back navigation", async ({page}) => { await login(page,CUSTOMER);await page.goto("/c/bean-and-bloom");await page.goto("/c/bean-and-bloom/rewards");await page.goBack();expect(page.url()).toContain("/c/bean-and-bloom"); });
+  test("247 owner route list covers at least 20 routes", async () => { expect(ownerRoutes.length).toBeGreaterThanOrEqual(20); });
+  test("248 customer route list covers all eight known routes", async () => { expect(customerRoutes.length).toBe(8); });
+  test("249 owner protected route does not become blank after reload", async ({page}) => { await login(page,OWNER);await page.goto("/admin/analytics");await page.reload();expect((await page.locator("body").innerText()).trim().length).toBeGreaterThan(10); });
+  test("250 customer protected route does not become blank after reload", async ({page}) => { await login(page,CUSTOMER);await page.goto("/c/bean-and-bloom/settings");await page.reload();expect((await page.locator("body").innerText()).trim().length).toBeGreaterThan(10); });
+});

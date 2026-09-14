@@ -1,0 +1,10 @@
+
+# Playwright
+node_modules/
+.env
+.next/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/

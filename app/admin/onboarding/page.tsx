@@ -1,0 +1,17 @@
+import Link from "next/link";
+import {requirePermission} from "@/lib/permissions";
+import { db } from "@/lib/db";
+import { Check, ArrowRight, QrCode, Gift, Utensils, Sparkles, Users } from "lucide-react";
+export default async function Onboarding(){
+ const s=await requirePermission("SETTINGS"); if(!s.user.cafeId)return null;
+ const c=await db.cafe.findUnique({where:{id:s.user.cafeId},include:{subscription:{include:{plan:true}},menuItems:{where:{active:true},take:1},rewards:{where:{active:true},take:1},features:true}}); if(!c)return null;
+ const steps=[
+  {title:"Add your menu",desc:"Create the products your team sells in the POS.",done:c.menuItems.length>0,href:"/admin/menu",icon:Utensils},
+  {title:"Set loyalty rules",desc:"Choose how customers earn points and stamps.",done:c.features.some(x=>x.feature==="LOYALTY_POINTS"&&x.enabled),href:"/admin/loyalty",icon:Sparkles},
+  {title:"Create a reward",desc:"Give customers a reason to come back.",done:c.rewards.length>0,href:"/admin/rewards",icon:Gift},
+  {title:"Put up your QR",desc:"Let customers join your branded wallet.",done:true,href:"/admin/qr",icon:QrCode},
+  {title:"Invite your team",desc:"Staff roles will be added in the team phase.",done:false,href:"/admin/settings",icon:Users},
+ ];
+ const done=steps.filter(x=>x.done).length;
+ return <div><span className="badge">Getting started</span><h1 className="mt-3 text-3xl font-black">Let’s get {c.name} ready.</h1><p className="mt-2 max-w-2xl muted">Finish these setup steps once. After that, your team can run loyalty from the daily POS.</p><div className="mt-7 card overflow-hidden"><div className="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--line)] p-5"><div><div className="font-black">Setup progress</div><div className="mt-1 text-xs muted">{done} of {steps.length} complete</div></div><div className="h-2 w-48 overflow-hidden rounded-full bg-[var(--soft)]"><div className="h-full rounded-full bg-[var(--gold)]" style={{width:`${done/steps.length*100}%`}}/></div></div><div>{steps.map((x,i)=>{const I=x.icon;return <Link href={x.href} key={x.title} className="flex items-center gap-4 border-b border-[var(--line)] p-5 last:border-0 hover:bg-[var(--soft)]"><div className={`grid h-11 w-11 place-items-center rounded-2xl ${x.done?"bg-[#e7f2e9] text-[#2e7440]":"bg-[var(--soft)] text-[var(--brown)]"}`}>{x.done?<Check size={20}/>:<I size={19}/>}</div><div className="min-w-0 flex-1"><div className="font-black">{i+1}. {x.title}</div><div className="mt-1 text-xs leading-5 muted">{x.desc}</div></div><ArrowRight size={17} className="opacity-40"/></Link>})}</div></div><div className="mt-5 grid gap-4 md:grid-cols-2"><div className="card p-5"><div className="text-xs font-black uppercase tracking-widest muted">Current plan</div><div className="mt-2 text-2xl font-black">{c.subscription?.plan.name||"Trial"}</div><Link href="/admin/billing" className="mt-3 inline-flex items-center gap-2 text-sm font-black text-[var(--brown)]">View billing <ArrowRight size={14}/></Link></div><div className="card bg-[var(--brown)] p-5 text-white"><div className="text-xs font-black uppercase tracking-widest text-white/45">Next</div><div className="mt-2 text-xl font-black">Take your first order.</div><p className="mt-1 text-xs leading-5 text-white/60">Once your menu is ready, open the POS and start building customer history.</p><Link href="/admin/pos" className="mt-4 inline-flex items-center gap-2 text-xs font-black text-[#f0c36b]">Open POS <ArrowRight size={14}/></Link></div></div></div>
+}

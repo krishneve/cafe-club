@@ -1,0 +1,1 @@
+import "./globals.css";export const metadata={title:"CafeClub — Café Loyalty SaaS",description:"Subscription SaaS for café loyalty, rewards and retention"};export default function RootLayout({children}:{children:React.ReactNode}){return <html lang="en"><body>{children}</body></html>}

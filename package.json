@@ -1,0 +1,42 @@
+{
+  "name": "cafeclub",
+  "version": "2.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "prisma generate && next build",
+    "start": "next start",
+    "db:push": "prisma db push",
+    "db:seed": "tsx prisma/seed.ts",
+    "test:security": "node scripts/security-smoke.mjs",
+    "validate": "npm run test:security && prisma validate",
+    "env:check": "node scripts/env-check.mjs",
+    "predeploy": "npm run env:check && npm run test:security && prisma validate",
+    "db:format": "prisma format",
+    "typecheck": "tsc --noEmit",
+    "release-check": "npm run predeploy && npm run typecheck && npm run build"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.16.0",
+    "lucide-react": "^0.468.0",
+    "next": "^15.5.25",
+    "qrcode": "^1.5.4",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "resend": "^6.0.0",
+    "stripe": "^18.5.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@tailwindcss/postcss": "^4.1.13",
+    "@types/node": "^22.10.2",
+    "@types/qrcode": "^1.5.5",
+    "@types/react": "^19.0.8",
+    "@types/react-dom": "^19.0.3",
+    "prisma": "^6.16.0",
+    "tailwindcss": "^4.1.13",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  }
+}

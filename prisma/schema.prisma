@@ -1,0 +1,564 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SUPER_ADMIN
+  CAFE_ADMIN
+  STAFF
+  CUSTOMER
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  EXPIRED
+}
+
+enum RewardType {
+  DISCOUNT
+  FREE_ITEM
+  FREE_UPGRADE
+  POINTS
+}
+
+enum CampaignType {
+  WIN_BACK
+  BIRTHDAY
+  ANNIVERSARY
+  BONUS_POINTS
+  GENERAL
+}
+
+enum FeatureType {
+  STAMP_CARD
+  LOYALTY_POINTS
+  SCRATCH_CARD
+  SPIN_WHEEL
+  OFFER
+  REFERRAL
+  MEMBERSHIP
+}
+
+enum OfferType {
+  PERCENTAGE
+  FIXED_AMOUNT
+  FREE_ITEM
+}
+
+enum MembershipStatus {
+  PENDING
+  ACTIVE
+  EXPIRED
+  CANCELED
+}
+
+model Plan {
+  id           String  @id @default(cuid())
+  name         String  @unique
+  monthlyPrice Float
+  maxCustomers Int?
+  features     String
+  stripePriceId String?
+  active       Boolean @default(true)
+
+  cafes        Cafe[]
+  subscriptions Subscription[]
+}
+
+model Cafe {
+  id           String   @id @default(cuid())
+  name         String
+  slug         String   @unique
+  email        String
+  phone        String?
+  logoUrl      String?
+  primaryColor String   @default("#5a2f1d")
+  accentColor  String   @default("#d99a35")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  admins             User[]
+  staffInvites       StaffInvite[]
+  auditLogs          AuditLog[]
+  customers          Customer[]
+  transactions       Transaction[]
+  menuItems          MenuItem[]
+  loyaltyActivities  LoyaltyActivity[]
+  rewards            Reward[]
+  campaigns          Campaign[]
+  offers             Offer[]
+  notifications      NotificationLog[]
+  automationRuns     AutomationRun[]
+  automationSettings AutomationSetting[]
+  feedback           Feedback[]
+  referrals          Referral[] @relation("CafeReferrals")
+  features           CafeFeature[]
+  membership         MembershipConfig?
+  memberships        Membership[]
+  subscription       Subscription?
+
+  planId String?
+  plan   Plan? @relation(fields: [planId], references: [id])
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String
+  name      String?
+  role      Role
+  cafeId    String?
+  staffRole String?
+  createdAt DateTime @default(now())
+
+  cafe       Cafe?      @relation(fields: [cafeId], references: [id], onDelete: SetNull)
+  sessions   Session[]
+  auditLogs  AuditLog[]
+
+  @@unique([email, cafeId])
+  @@index([cafeId])
+  @@index([cafeId, role])
+}
+
+model Customer {
+  id           String   @id @default(cuid())
+  cafeId       String
+  email        String
+  name         String?
+  emailOptOut  Boolean  @default(false)
+  birthday     DateTime?
+  anniversary  DateTime?
+
+  pointsBalance Int   @default(0)
+  stamps        Int   @default(0)
+  referralCode  String  @unique
+  totalSpend    Float @default(0)
+  visits        Int   @default(0)
+  lastVisitAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cafe              Cafe               @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+  transactions      Transaction[]
+  redemptions       Redemption[]
+  offerRedemptions  OfferRedemption[]
+  memberships       Membership[]
+  feedback          Feedback[]
+  loyaltyActivities LoyaltyActivity[]
+  notifications     NotificationLog[]
+  referralsSent     Referral[]         @relation("Referrer")
+  referralsReceived Referral[]         @relation("Referred")
+
+  @@unique([cafeId, email])
+  @@index([cafeId, lastVisitAt])
+}
+
+model Transaction {
+  id            String   @id @default(cuid())
+  cafeId        String
+  customerId    String
+  orderNumber   String
+  amount        Float
+  itemsJson     String   @default("[]")
+  pointsEarned  Int      @default(0)
+  stampsEarned  Int      @default(0)
+  paymentMethod String   @default("CASH")
+  offerId       String?
+  discountAmount Float   @default(0)
+  createdAt     DateTime @default(now())
+
+  cafe     Cafe     @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  offer    Offer?   @relation(fields: [offerId], references: [id], onDelete: SetNull)
+
+  @@index([cafeId, createdAt])
+  @@index([customerId, createdAt])
+}
+
+model MenuItem {
+  id          String   @id @default(cuid())
+  cafeId      String
+  category    String
+  name        String
+  description String?
+  price       Float
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  cafe Cafe @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+
+  @@index([cafeId, category, active])
+}
+
+model LoyaltyActivity {
+  id           String   @id @default(cuid())
+  cafeId       String
+  customerId   String
+  type         String
+  title        String
+  description  String?
+  points       Int      @default(0)
+  stamps       Int      @default(0)
+  metadataJson String   @default("{}")
+  createdAt    DateTime @default(now())
+
+  cafe     Cafe     @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([cafeId, createdAt])
+  @@index([customerId, createdAt])
+}
+
+model Reward {
+  id          String     @id @default(cuid())
+  cafeId      String
+  title       String
+  description String?
+  pointsCost  Int
+  type        RewardType
+  value       Float?
+  active      Boolean    @default(true)
+  membersOnly Boolean    @default(false)
+  stock       Int?
+  createdAt   DateTime   @default(now())
+
+  cafe        Cafe         @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+  redemptions Redemption[]
+
+  @@index([cafeId, active])
+}
+
+model Redemption {
+  id          String   @id @default(cuid())
+  cafeId      String
+  customerId  String
+  rewardId    String
+  pointsSpent Int
+  status      String   @default("ISSUED")
+  expiresAt   DateTime?
+  createdAt   DateTime @default(now())
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  reward   Reward   @relation(fields: [rewardId], references: [id])
+
+  @@index([cafeId, createdAt])
+}
+
+model Campaign {
+  id              String       @id @default(cuid())
+  cafeId          String
+  name            String
+  type            CampaignType
+  message         String
+  active          Boolean      @default(true)
+  bonusPoints     Int?
+  discountValue   Float?
+  minDaysAway     Int?
+  audience        String       @default("ALL")
+  sentAt          DateTime?
+  recipientCount  Int          @default(0)
+  createdAt       DateTime     @default(now())
+
+  cafe          Cafe             @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+  notifications NotificationLog[]
+
+  @@index([cafeId, active])
+}
+
+model Offer {
+  id               String    @id @default(cuid())
+  cafeId           String
+  code             String
+  title            String
+  description      String?
+  type             OfferType
+  value            Float?
+  minSpend         Float     @default(0)
+  maxDiscount      Float?
+  usageLimit       Int?
+  usageCount       Int       @default(0)
+  perCustomerLimit Int       @default(1)
+  startsAt         DateTime?
+  expiresAt        DateTime?
+  active           Boolean   @default(true)
+  createdAt        DateTime  @default(now())
+
+  cafe        Cafe             @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+  redemptions OfferRedemption[]
+
+  @@unique([cafeId, code])
+  @@index([cafeId, active, expiresAt])
+}
+
+model OfferRedemption {
+  id             String   @id @default(cuid())
+  cafeId         String
+  offerId        String
+  customerId     String
+  transactionId  String?
+  discountAmount Float
+  createdAt      DateTime @default(now())
+
+  offer    Offer    @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([cafeId, createdAt])
+  @@index([customerId, offerId])
+}
+
+model Feedback {
+  id           String   @id @default(cuid())
+  cafeId       String
+  customerId   String
+  rating       Int
+  comment      String?
+  foodRating   Int?
+  staffRating  Int?
+  speedRating  Int?
+  ambienceRating Int?
+  createdAt    DateTime @default(now())
+
+  cafe     Cafe     @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([cafeId, createdAt])
+}
+
+model Referral {
+  id           String   @id @default(cuid())
+  cafeId       String
+  referrerId   String
+  referredId   String?
+  code         String
+  status       String   @default("PENDING")
+  rewardPoints Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  cafe     Cafe      @relation("CafeReferrals", fields: [cafeId], references: [id], onDelete: Cascade)
+  referrer Customer  @relation("Referrer", fields: [referrerId], references: [id], onDelete: Cascade)
+  referred Customer? @relation("Referred", fields: [referredId], references: [id])
+
+  @@index([cafeId, code])
+}
+
+model CafeFeature {
+  id         String      @id @default(cuid())
+  cafeId     String
+  feature    FeatureType
+  enabled    Boolean     @default(true)
+  configJson String      @default("{}")
+
+  cafe Cafe @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+
+  @@unique([cafeId, feature])
+}
+
+model Membership {
+  id                       String           @id @default(cuid())
+  cafeId                   String
+  customerId               String
+  status                   MembershipStatus @default(PENDING)
+  startedAt                DateTime?
+  expiresAt                DateTime?
+  pricePaid                Float            @default(0)
+  stripeCheckoutSessionId  String?          @unique
+  createdAt                DateTime         @default(now())
+  updatedAt                DateTime         @updatedAt
+
+  cafe     Cafe     @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@unique([cafeId, customerId])
+  @@index([cafeId, status, expiresAt])
+  @@index([cafeId, expiresAt, status])
+  @@index([customerId, status, expiresAt])
+}
+
+model MembershipConfig {
+  id                      String   @id @default(cuid())
+  cafeId                  String   @unique
+  name                    String   @default("Club Membership")
+  price                   Float    @default(0)
+  durationDays            Int      @default(365)
+  benefitsJson            String   @default("[]")
+  memberDiscountPercent   Float    @default(0)
+  bonusPointsMultiplier   Float    @default(1)
+  exclusiveRewards       Boolean  @default(false)
+  active                  Boolean  @default(true)
+
+  cafe Cafe @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+}
+
+model Subscription {
+  id                    String             @id @default(cuid())
+  cafeId                String             @unique
+  planId                String
+  status                SubscriptionStatus @default(TRIALING)
+  currentPeriodEnd      DateTime?
+  stripeCustomerId      String?
+  stripeSubscriptionId  String?
+  stripeCheckoutSessionId String?
+  cancelAtPeriodEnd     Boolean            @default(false)
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  cafe Cafe @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+  plan Plan @relation(fields: [planId], references: [id])
+}
+
+model StaffInvite {
+  id         String   @id @default(cuid())
+  cafeId     String
+  email      String
+  name       String?
+  staffRole  String   @default("CASHIER")
+  tokenHash  String   @unique
+  expiresAt  DateTime
+  acceptedAt DateTime?
+  createdAt  DateTime @default(now())
+
+  cafe Cafe @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+
+  @@index([cafeId, email])
+  @@index([cafeId, expiresAt])
+  @@index([cafeId, acceptedAt])
+}
+
+model AuditLog {
+  id           String   @id @default(cuid())
+  cafeId       String
+  userId       String?
+  action       String
+  entity       String
+  entityId     String?
+  metadataJson String   @default("{}")
+  createdAt    DateTime @default(now())
+
+  cafe Cafe @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([cafeId, createdAt])
+  @@index([cafeId, userId, createdAt])
+  @@index([cafeId, action, createdAt])
+}
+
+model Session {
+  id          String   @id @default(cuid())
+  tokenHash   String   @unique
+  userId      String
+  cafeId      String?
+  customerId  String?
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([cafeId])
+  @@index([expiresAt])
+}
+
+model Otp {
+  id         String   @id @default(cuid())
+  email      String
+  cafeId     String
+  codeHash   String
+  attempts   Int      @default(0)
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+
+  @@index([email, cafeId])
+  @@index([cafeId, expiresAt])
+}
+
+model GamePlay {
+  id         String      @id @default(cuid())
+  cafeId     String
+  customerId String
+  feature    FeatureType
+  playDate   String
+  createdAt  DateTime    @default(now())
+
+  @@unique([customerId, feature, playDate])
+  @@index([cafeId, createdAt])
+}
+
+model NotificationLog {
+  id         String   @id @default(cuid())
+  cafeId     String
+  customerId String
+  campaignId String?
+  channel    String   @default("EMAIL")
+  subject    String
+  status     String   @default("QUEUED")
+  body       String   @default("")
+  dedupeKey  String?  @unique
+  error      String?
+  sentAt     DateTime?
+  createdAt  DateTime @default(now())
+
+  cafe     Cafe      @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+  customer Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  campaign Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+
+  @@index([cafeId, createdAt])
+  @@index([customerId, createdAt])
+  @@index([campaignId, status])
+  @@index([cafeId, status, createdAt])
+}
+
+model AutomationRun {
+  id          String   @id @default(cuid())
+  cafeId      String
+  key         String
+  runKey      String   @unique
+  status      String   @default("RUNNING")
+  sentCount   Int      @default(0)
+  failedCount Int      @default(0)
+  simulated   Boolean  @default(false)
+  error       String?
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+
+  cafe Cafe @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+
+  @@index([cafeId, createdAt])
+  @@index([cafeId, key, createdAt])
+}
+
+model AutomationSetting {
+  id        String   @id @default(cuid())
+  cafeId    String
+  key       String
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cafe Cafe @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+
+  @@unique([cafeId, key])
+  @@index([cafeId, enabled])
+}
+
+model WebhookEvent {
+  id          String   @id @default(cuid())
+  provider    String
+  eventId     String
+  type        String
+  status      String   @default("PROCESSING")
+  error       String?
+  processedAt DateTime?
+  createdAt   DateTime @default(now())
+
+  @@unique([provider, eventId])
+  @@index([provider, status, createdAt])
+}

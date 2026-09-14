@@ -1,0 +1,2 @@
+import Link from "next/link";
+export default function NotFound(){return <main className="grid min-h-screen place-items-center p-6"><div className="card max-w-md p-8 text-center"><div className="text-5xl">☕</div><h1 className="mt-4 text-3xl font-black">We can't find that page</h1><p className="mt-2 muted">The café link may be incorrect or the page has moved.</p><Link href="/" className="btn primary mt-6">Back to CafeClub</Link></div></main>}

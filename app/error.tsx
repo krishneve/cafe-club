@@ -1,0 +1,3 @@
+"use client";
+import { useEffect } from "react";
+export default function Error({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) { useEffect(() => { console.error(error); }, [error]); return <main className="grid min-h-screen place-items-center p-6"><div className="card w-full max-w-md p-8 text-center"><div className="text-4xl">☕</div><h1 className="mt-4 text-2xl font-black">Something went wrong</h1><p className="mt-2 muted">We couldn't load this page. Your data hasn't been deleted.</p><button className="btn primary mt-6" onClick={() => reset()}>Try again</button></div></main> }
